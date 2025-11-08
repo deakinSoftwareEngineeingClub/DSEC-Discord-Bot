@@ -27,12 +27,12 @@ pub async fn help(
 /// Ping the bot
 #[poise::command(slash_command)]
 pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
+    // send embed -> take how long it took -> edit message about how long it took
     let start = Instant::now();
 
     let embed_color = Colour::DARK_GREY;
 
     let start_embed_msg = CreateEmbed::new().title("Pinging...").color(embed_color);
-
     let first_reply: CreateReply = CreateReply::default().embed(start_embed_msg);
 
     let msg = ctx.send(first_reply).await?;
@@ -63,48 +63,42 @@ pub async fn userinfo(
     let discord_user: User = user.unwrap_or(ctx.author().to_owned());
     let discord_member = GuildId::member(ctx.guild_id().unwrap(), ctx, discord_user.id).await?;
 
+    // color
     let embed_color = discord_user.accent_colour.unwrap_or(Colour::DARK_GREY);
 
+    // member dates
     let member_created_at = discord_user.created_at().format("%d/%m/%Y %I:%M %p");
     let member_joined_at = discord_member
         .joined_at
         .unwrap()
         .format("%d/%m/%Y %I:%M %p");
 
+    // user information
     let user_id = &discord_user.id;
+    let user_avatar_url = discord_user
+        .avatar_url()
+        .unwrap_or(discord_user.default_avatar_url());
     let username = &discord_user.name;
 
+    // member information
     let nickname = &discord_member.nick.unwrap_or(username.to_owned());
-
     let role_ids = discord_member.roles;
     let role_mentions: Vec<String> = role_ids
         .into_iter()
         .map(|role_id| format!("<@&{}>", role_id))
         .collect();
 
-    let user_avatar_url = discord_user
-        .avatar_url()
-        .unwrap_or(discord_user.default_avatar_url());
-
+    // embed
     let result_embed_msg = CreateEmbed::new()
         .thumbnail(user_avatar_url)
         .color(embed_color)
         .title("User Info")
-        .description(format!(
-            "**ID**: {} \n\
-            **Display Name**: {}\n\
-            **Username**: {}\n\
-            **Created At**: {}\n\
-            **Joined At**: {}\n\
-            **Roles**: {}
-        ",
-            user_id,
-            nickname,
-            username,
-            member_created_at,
-            member_joined_at,
-            role_mentions.join(" ")
-        ));
+        .field("Display Name", nickname, true)
+        .field("Username", username, true)
+        .field("Created At", format!("{}", member_created_at), false)
+        .field("Joined At", format!("{}", member_joined_at), false)
+        .field("Roles", role_mentions.join(" "), false)
+        .footer(CreateEmbedFooter::new(format!("ID: {}", user_id)));
 
     ctx.send(CreateReply::default().embed(result_embed_msg))
         .await?;
@@ -117,7 +111,10 @@ pub async fn userinfo(
 pub async fn serverinfo(ctx: Context<'_>) -> Result<(), Error> {
     let embed_color = Colour::DARK_GREY;
 
+    // partial guild allows to access server information (excluding members information) without cache
     let partial_guild = ctx.partial_guild().await.unwrap();
+
+    // getting accurate member count from cache ref
     let member_count = {
         let guild = ctx.guild();
         guild.as_deref().unwrap().member_count
@@ -125,7 +122,6 @@ pub async fn serverinfo(ctx: Context<'_>) -> Result<(), Error> {
 
     // count different types of channels
     let channels_hashmap = partial_guild.clone().channels(ctx).await?;
-
     let guild_channels = channels_hashmap.into_values();
 
     let mut counts: HashMap<ChannelType, u32> = HashMap::new();
@@ -145,15 +141,17 @@ pub async fn serverinfo(ctx: Context<'_>) -> Result<(), Error> {
     let text_channel_count = counts.get(&ChannelType::Text).unwrap_or(&0);
     let voice_channel_count = counts.get(&ChannelType::Voice).unwrap_or(&0);
 
+    // server information
     let server_id = &partial_guild.id;
     let server_name = &partial_guild.name;
+    let server_icon = &partial_guild.icon_url().unwrap_or_default();
     let owner_id = &partial_guild.owner_id;
 
+    // server description, if empty N/A
     let server_description_option = &partial_guild.description;
     let server_description = server_description_option.as_deref().unwrap_or("N/A");
 
-    let server_icon = &partial_guild.icon_url().unwrap_or_default();
-
+    // rules channel, if empty N/A
     let rules_channel = if (&partial_guild.rules_channel_id).is_none() {
         "N/A"
     } else {
