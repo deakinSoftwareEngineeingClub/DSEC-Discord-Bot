@@ -4,7 +4,19 @@ Deakin Software Engineering Club Discord Bot project. To encourage students to l
 
 ## Setup
 
-To be updated
+### Setup Rust
+
+Installing Rustup will also install `cargo`
+
+Linux & MacOS:
+
+```
+curl https://sh.rustup.rs -sSf | sh
+```
+
+Windows:
+
+Download and run [rustup-init.exe](https://win.rustup.rs/)
 
 ## Rules
 
