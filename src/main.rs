@@ -37,5 +37,9 @@ async fn main() {
     let client = serenity::ClientBuilder::new(token, intents)
         .framework(framework)
         .await;
-    client.unwrap().start().await.unwrap();
+    client
+        .expect("Client failed to start")
+        .start()
+        .await
+        .expect("Client failed to start 2");
 }
