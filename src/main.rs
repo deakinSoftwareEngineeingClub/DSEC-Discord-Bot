@@ -22,7 +22,7 @@ async fn main() {
                 commands::info::ping(),
                 commands::info::userinfo(),
                 commands::info::serverinfo(),
-                // commands::weather::weather(),
+                commands::weather::weather(),
             ],
             ..Default::default()
         })
