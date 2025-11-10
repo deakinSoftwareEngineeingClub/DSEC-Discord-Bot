@@ -1,36 +1,56 @@
 FROM rust:trixie AS builder
 
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /usr/src/dsec_bot
 
 # Copy manifest files first to leverage Docker layer caching for dependencies
 COPY Cargo.toml Cargo.lock ./
 
-# Create a dummy main to cache dependency compilation
-RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
+# Create a dummy project structure to cache dependency compilation
+RUN mkdir src && \
+    echo 'fn main() { println!("Dummy main for dependency caching"); }' > src/main.rs
 
-# Build dependencies (this layer will be cached)
-RUN cargo build --release
+# Build dependencies (this layer will be cached unless Cargo.toml/Cargo.lock changes)
+RUN cargo build --release && \
+    rm -rf src target/release/deps/dsec_bot*
 
-# Remove dummy and copy real source
-RUN rm -rf src
-COPY . .
+# Copy the actual source code
+COPY src ./src
 
 # Build the actual application
 RUN cargo build --release
 
-# Use a small image for the final build
+# Runtime stage - use a minimal image
 FROM debian:bookworm-slim
 
-# Set the working directory
-WORKDIR /usr/local/bin
+# Create a non-root user for security
+RUN groupadd -r dsecbot && useradd --no-log-init -r -g dsecbot dsecbot
 
-# Install CA certificates for TLS/HTTPS support
+# Install runtime dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && update-ca-certificates
+
+# Set the working directory
+WORKDIR /app
 
 # Copy the application binary from the builder stage
-COPY --from=builder /usr/src/dsec_bot/target/release/dsec_bot .
+COPY --from=builder /usr/src/dsec_bot/target/release/dsec_bot ./dsec_bot
+
+# Change ownership of the application to the non-root user
+RUN chown dsecbot:dsecbot /app/dsec_bot && \
+    chmod +x /app/dsec_bot
+
+# Switch to non-root user
+USER dsecbot
 
 # Specify the command to run the application
 CMD ["./dsec_bot"]
