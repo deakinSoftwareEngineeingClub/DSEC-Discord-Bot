@@ -15,7 +15,7 @@ pub async fn help(
         ctx,
         command.as_deref(),
         poise::builtins::HelpConfiguration {
-            extra_text_at_bottom: "made using Serenity Poise framework in Rust and with ❤️",
+            extra_text_at_bottom: "Made by Deakin Software Engineering Club with ❤️",
             ..Default::default()
         },
     )
