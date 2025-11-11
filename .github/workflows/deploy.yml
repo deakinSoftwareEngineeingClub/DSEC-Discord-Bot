@@ -16,7 +16,7 @@ jobs:
             - name: Build and deploy with Docker Compose
               run: |
                   echo "Starting Docker Compose with --build and --force-recreate..."
-                  cd /dsec_bot
+                  cd ~/dsec_bot
                   docker-compose up -d --build --force-recreate
 
                   echo "Deployment complete."
