@@ -162,6 +162,7 @@ pub async fn serverinfo(ctx: Context<'_>) -> Result<(), Error> {
     let result_embed_msg = CreateEmbed::new()
         .thumbnail(server_icon)
         .title(server_name)
+        .description(server_description)
         .field("Owner", format!("<@{}>", owner_id), true)
         .field("Rules", rules_channel, true)
         .field("Members", format!("{}", member_count), true)
@@ -172,7 +173,6 @@ pub async fn serverinfo(ctx: Context<'_>) -> Result<(), Error> {
         )
         .field("Text Channels", format!("{}", text_channel_count), true)
         .field("Voice Channels", format!("{}", voice_channel_count), true)
-        .field("Description", server_description, false)
         .footer(embed_footer)
         .color(embed_color);
 
