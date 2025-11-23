@@ -1,4 +1,5 @@
 use crate::{Data, Error};
+use dotenv::dotenv;
 use poise::{CreateReply, Modal};
 use serde::{Deserialize, Serialize};
 use serenity::all::{
@@ -26,46 +27,47 @@ struct VerificationModal {
     student_id: String,
 }
 
-#[poise::command(slash_command, subcommands("embed", "myself"))]
-pub async fn verify(_: ApplicationContext<'_>) -> Result<(), Error> {
-    Ok(())
-}
+// #[poise::command(slash_command, subcommands("embed", "myself"))]
+// pub async fn verify(_: ApplicationContext<'_>) -> Result<(), Error> {
+//     Ok(())
+// }
 
+/// Verify your DSEC club membership to obtain role
 #[poise::command(slash_command)]
-pub async fn myself(ctx: ApplicationContext<'_>) -> Result<(), Error> {
+pub async fn verify(ctx: ApplicationContext<'_>) -> Result<(), Error> {
     verify_member(ctx).await?;
 
     Ok(())
 }
 
-#[poise::command(slash_command)]
-pub async fn embed(ctx: ApplicationContext<'_>) -> Result<(), Error> {
-    let reply: CreateReply = {
-        let embed: CreateEmbed = CreateEmbed::new()
-            .title("Verify your DSEC membership")
-            .description("Click **Verify Here** and enter your **Full name** and **Student ID** (e.g., s123456789). Your responses are private.");
+// #[poise::command(slash_command)]
+// pub async fn verify(ctx: ApplicationContext<'_>) -> Result<(), Error> {
+//     let reply: CreateReply = {
+//         let embed: CreateEmbed = CreateEmbed::new()
+//             .title("Verify your DSEC membership")
+//             .description("Click **Verify Here** and enter your **Full name** and **Student ID** (e.g., s123456789). Your responses are private.");
 
-        let button: CreateButton = CreateButton::new("verify").label("Verify Here");
+//         let button: CreateButton = CreateButton::new("verify").label("Verify Here");
 
-        let components = vec![CreateActionRow::Buttons(vec![button])];
+//         let components = vec![CreateActionRow::Buttons(vec![button])];
 
-        CreateReply::default()
-            .ephemeral(false)
-            .embed(embed)
-            .components(components)
-    };
+//         CreateReply::default()
+//             .ephemeral(false)
+//             .embed(embed)
+//             .components(components)
+//     };
 
-    ctx.send(reply).await?;
+//     ctx.send(reply).await?;
 
-    while let Some(_) = ComponentInteractionCollector::new(ctx.serenity_context())
-        .filter(move |mci| mci.data.custom_id == "verify")
-        .await
-    {
-        verify_member(ctx).await?;
-    }
+//     while let Some(_) = ComponentInteractionCollector::new(ctx.serenity_context())
+//         .filter(move |mci| mci.data.custom_id == "verify")
+//         .await
+//     {
+//         verify_member(ctx).await?;
+//     }
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 // flow:
 // 1. check correct discord server -> layer 1
@@ -79,6 +81,8 @@ pub async fn embed(ctx: ApplicationContext<'_>) -> Result<(), Error> {
 // - check if name matches full name
 // - if match, assign role
 async fn verify_member(ctx: ApplicationContext<'_>) -> Result<(), Error> {
+    dotenv().ok();
+
     // check if user is in a Discord server, then check if user is in THE Discord server
     let guild_id = ctx.guild_id();
 
@@ -87,7 +91,18 @@ async fn verify_member(ctx: ApplicationContext<'_>) -> Result<(), Error> {
         return Ok(());
     }
 
-    let server = GuildId::new(735865924829315072);
+    let guild_id_string = std::env::var("GUILD_ID").expect("missing GUILD_ID");
+    let role_id_string = std::env::var("VERIFIED_ROLE_ID").expect("missing VERIFIED_ROLE_ID");
+
+    let guild_id_u64: u64 = guild_id_string
+        .parse()
+        .expect("Unable to parse GUILD_ID into number");
+
+    let role_id_u64: u64 = role_id_string
+        .parse()
+        .expect("Unable to parse VERIFIED_ROLE_ID into number");
+
+    let server = GuildId::new(guild_id_u64);
 
     let in_correct_server = &guild_id.unwrap() == &server; // CHANGE
 
@@ -100,7 +115,7 @@ async fn verify_member(ctx: ApplicationContext<'_>) -> Result<(), Error> {
     // role ID 1441965955822649344
     let user_id = ctx.author().id;
 
-    let verified_role_id = RoleId::new(1441965955822649344); // hardcoded for now
+    let verified_role_id = RoleId::new(role_id_u64); // hardcoded for now
     let discord_member = GuildId::member(ctx.guild_id().unwrap(), ctx, user_id).await?;
     let has_role = discord_member.roles.contains(&verified_role_id);
 
