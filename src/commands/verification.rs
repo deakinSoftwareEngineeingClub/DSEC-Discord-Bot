@@ -1,7 +1,7 @@
 use crate::{ApplicationContext, Error};
 use poise::{CreateReply, Modal};
 use serde::{Deserialize, Serialize};
-use serenity::all::{CreateActionRow, CreateButton, CreateEmbed};
+use serenity::all::{CreateActionRow, CreateButton, CreateEmbed, CreateMessage};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct StudentRow {
@@ -27,7 +27,7 @@ pub struct VerificationModal {
     required_permissions = "MANAGE_MESSAGES | MANAGE_THREADS"
 )]
 pub async fn verify(ctx: ApplicationContext<'_>) -> Result<(), Error> {
-    let reply: CreateReply = {
+    let message = {
         let embed: CreateEmbed = CreateEmbed::new()
             .title("Verify your DSEC membership")
             .description("Click **Verify Here** and enter your **Full name** and **Student ID** (e.g., s123456789). Your responses are private.");
@@ -36,11 +36,16 @@ pub async fn verify(ctx: ApplicationContext<'_>) -> Result<(), Error> {
 
         let components = vec![CreateActionRow::Buttons(vec![button])];
 
-        CreateReply::default()
-            .ephemeral(false)
-            .embed(embed)
-            .components(components)
+        CreateMessage::new().add_embed(embed).components(components)
     };
+
+    let reply = CreateReply::default()
+        .content("Successfully sent embed!")
+        .ephemeral(true);
+
+    let channel_id = ctx.channel_id();
+
+    channel_id.send_message(ctx, message).await?;
 
     ctx.send(reply).await?;
 
